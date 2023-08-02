@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.signal import lfilter
-from montage import bipolar_montage
 
 
 def channel_sort_list(channels):
