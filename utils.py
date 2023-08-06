@@ -4,13 +4,13 @@ from scipy.signal import lfilter
 
 def channel_sort_list(channels):
     """
-    Function to add 0s to channels and sort them
+    Function to add 0s to uni_names and sort them
 
     :param channels: Unipolar channel names
     :return: Modified and sorted unipolar channel names
     """
 
-    # rename channels add 0s - for good ordering
+    # rename uni_names add 0s - for good ordering
     modified_channels = []
     for channel in channels:
         digits = [x for x in channel if x.isdigit()]
@@ -73,43 +73,43 @@ def define_pairs(channels):
             bipolar_pairs.append([ch, channels[i + 1]])
             bipolar_names.append(ch + '_' + str(channel_nums[i + 1]))
 
-    # We have bipolar pairs - we can create montages
     return bipolar_pairs, bipolar_names
 
 
-def bipolar_montage(data, channels):
+def bipolar_montage(data, channels, pairs):
     """
     Function to define bipolar channel names and compute signal of bipolar measurement
 
     :param data: Thirty-second signal segment
     :param channels: Unipolar channel names
-    :return: Computed signal of bipolar measurement and defined bipolar pairs
+    :param pairs: Bipolar pairs
+    :return: Computed bipolar data
     """
 
     if len(data.T) != len(channels):
         assert 'Number of channel names must be equal to number of signals.'
 
     ch_dict = dict(zip(channels, np.arange(len(channels))))
-    pairs, names = define_pairs(channels)
 
     bi_data = np.zeros([len(data), len(pairs)], dtype='float64')
 
     for i, pair in enumerate(pairs):
         bi_data[:, i] = data[:, ch_dict[pair[0]]] - data[:, ch_dict[pair[1]]]
 
-    return bi_data, names
+    return bi_data
 
 
-def read_signal(ms, time_start, window, overlap, channel_names):
+def read_signal(ms, time_start, window, overlap, channels, pairs):
     """
-    Function to read signal from MEF session and get bipolar measurement data
+    Function to read signal from MEF session and compute bipolar data
 
     :param ms: MEF session
     :param time_start: Signal segment start time
     :param window: Thirty-second window
     :param overlap: Overlapping part size
-    :param channel_names: Unipolar channel names
-    :return: Computed signal of bipolar measurement and defined bipolar pairs
+    :param channels: Unipolar channel names
+    :param pairs: Bipolar pairs
+    :return: Computed bipolar data
     """
 
     overlap_size = overlap * 1e6
@@ -118,12 +118,12 @@ def read_signal(ms, time_start, window, overlap, channel_names):
     time_start = time_start - overlap_size
     time_stop = time_start + window + 2 * overlap_size
 
-    data = np.c_[ms.read_ts_channels_uutc(channel_names, [int(time_start), int(time_stop)])]
+    uni_data = np.c_[ms.read_ts_channels_uutc(channels, [int(time_start), int(time_stop)])]
 
     # create bipolar
-    bipolar_data, bipolar_channels = bipolar_montage(data.T, channel_names)
+    bi_data = bipolar_montage(uni_data.T, channels, pairs)
 
-    return bipolar_data, bipolar_channels
+    return bi_data
 
 
 def change_sampling_rate(x, fs):

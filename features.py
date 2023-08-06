@@ -22,7 +22,7 @@ fs = int(hdr[0]['fsamp'][0])
 nsamp = hdr[0]['nsamp'][0]
 start_time = hdr[0]['start_time'][0] * 1e-6
 
-channel_names = [x['name'] for x in hdr]
+uni_names = [x['name'] for x in hdr]
 
 date = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 sec = float(date.split(':')[-1])
@@ -38,12 +38,10 @@ else:
     sec = '29'
 
 sta = round(sta)
-epochs = int((nsamp - sta) / fs / 30)
-
 start_time = (start_time + sta/fs) * 1e6
 
 # compute features init
-
+epochs = int((nsamp - sta) / fs / 30)
 nfeat = 24
 ne = 0
 nf = 1
@@ -52,30 +50,25 @@ sleep_stage = np.zeros((1500, 5))
 night = np.ones((1500, 1), dtype=bool)
 sleep_stage[ne:epochs, 0:2] = np.array((np.ones(epochs) * nf, start_time + np.arange(0, epochs) / 2880), dtype=int).T
 
+bi_pairs, bi_names = define_pairs(uni_names)
+num_channels = len(bi_names)
+feature = np.zeros((nfeat, len(bi_names), 1500))
+
 print('Computing features...')
 
 for ii in range(0, epochs):
-    bipolar_data, bipolar_channels = read_signal(ms,
-                                                 start_time+ii*window*1e6,
-                                                 window,
-                                                 overlap,
-                                                 channel_names)
-    num_channels = len(bipolar_channels)
+    bi_data = read_signal(ms, start_time + ii * window * 1e6, window, overlap, uni_names, bi_pairs)
+    bi_data = change_sampling_rate(bi_data, fs)
 
-    if ii == 0:
-        feature = np.zeros((nfeat, len(bipolar_channels), 1500))
+    bi_data = bi_data[63:, :]
+    bi_data = bi_data[:8192, :]
+    bi_data = bi_data - np.tile(np.mean(bi_data), (8192, 1))
 
-    signal = change_sampling_rate(bipolar_data, fs)
-
-    signal = signal[63:, :]
-    signal = signal[:8192, :]
-    signal = signal - np.tile(np.mean(signal), (8192, 1))
-
-    for i in range(signal.shape[1]):
-        feature[:, i, ne] = compute_features(signal[:, i])
+    for i in range(bi_data.shape[1]):
+        feature[:, i, ne] = compute_features(bi_data[:, i])
 
     night[ne] = nf <= nnf
-    sleep_stage[ne, 4] = sta + 30 * fs * (ii - 1)
+    sleep_stage[ne, 4] = sta + 30 * fs * ii
 
     ne += 1
 
