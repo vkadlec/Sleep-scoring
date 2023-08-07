@@ -1,15 +1,19 @@
 import numpy as np
 import pickle as pkl
-from utils import *
 from datetime import datetime
 from pymef.mef_session import MefSession
 
+from utils import *
+from montage import define_pairs
 
-mef_file = 'C:/Users/vojta/PycharmProjects/ICRC/HFO/data/mni_00583_01.mefd'
-password = 'mnimef'
+# mef_file = 'C:/Users/vojta/PycharmProjects/ICRC/HFO/data/mni_00583_01.mefd'
+# password = 'mnimef'
 
 # mef_file = 'D:/sleep_scoring/mefs/seeg_060_sleep_sliced.mefd'
 # password = 'bemena'
+
+mef_file = 'D:/sleep/seeg_066_sleep_sliced.mefd'
+password = 'bemena'
 
 window = 30
 overlap = 1.25
@@ -38,7 +42,7 @@ else:
     sec = '29'
 
 sta = round(sta)
-start_time = (start_time + sta/fs) * 1e6
+start_time = (start_time + sta / fs) * 1e6
 
 # compute features init
 epochs = int((nsamp - sta) / fs / 30)
